@@ -583,6 +583,8 @@ func TestGetFlinkJobDeploymentState(t *testing.T) {
 	var err error
 	var termMsg string
 
+	var containerName = "main"
+
 	// success
 	termMsg = `
 jobID: ec74209eb4e3db8ae72db00bd7a830aa
@@ -605,6 +607,7 @@ Job has been submitted with JobID ec74209eb4e3db8ae72db00bd7a830aa
 	pod = corev1.Pod{
 		Status: corev1.PodStatus{
 			ContainerStatuses: []corev1.ContainerStatus{{
+				Name: containerName,
 				State: corev1.ContainerState{
 					Terminated: &corev1.ContainerStateTerminated{
 						Message: termMsg,
@@ -620,6 +623,7 @@ Job has been submitted with JobID ec74209eb4e3db8ae72db00bd7a830aa
 	pod = corev1.Pod{
 		Status: corev1.PodStatus{
 			ContainerStatuses: []corev1.ContainerStatus{{
+				Name: containerName,
 				State: corev1.ContainerState{
 					Terminated: &corev1.ContainerStateTerminated{
 						Message: "",
