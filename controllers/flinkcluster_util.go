@@ -20,6 +20,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	v1beta1 "github.com/googlecloudplatform/flink-operator/api/v1beta1"
 	"github.com/googlecloudplatform/flink-operator/controllers/history"
 	"gopkg.in/yaml.v2"
@@ -30,10 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -566,9 +567,21 @@ func getFlinkJobSubmitLog(observedPod *corev1.Pod) (*FlinkJobSubmitLog, error) {
 		return nil, fmt.Errorf("no job pod found, even though submission completed")
 	}
 	var containerStatuses = observedPod.Status.ContainerStatuses
-	if len(containerStatuses) == 0 ||
-		containerStatuses[0].State.Terminated == nil ||
-		containerStatuses[0].State.Terminated.Message == "" {
+	if len(containerStatuses) == 0 {
+		return nil, fmt.Errorf("job pod found, but no termination log found even though submission completed")
+	}
+
+	var mainContainerStatus *corev1.ContainerStatus
+	for i := 0; i < len(containerStatuses); i++ {
+		if containerStatuses[i].Name == "main" {
+			mainContainerStatus = &containerStatuses[i]
+			break
+		}
+	}
+
+	if mainContainerStatus == nil ||
+		mainContainerStatus.State.Terminated == nil ||
+		mainContainerStatus.State.Terminated.Message == "" {
 		return nil, fmt.Errorf("job pod found, but no termination log found even though submission completed")
 	}
 
@@ -577,7 +590,7 @@ func getFlinkJobSubmitLog(observedPod *corev1.Pod) (*FlinkJobSubmitLog, error) {
 	// The job submit script writes the submission result in YAML format,
 	// so parse it here to get the ID - if available - and log.
 	// Note: https://kubernetes.io/docs/tasks/debug-application-cluster/determine-reason-pod-failure/
-	var rawJobSubmitResult = containerStatuses[0].State.Terminated.Message
+	var rawJobSubmitResult = mainContainerStatus.State.Terminated.Message
 	var result = new(FlinkJobSubmitLog)
 	var err = yaml.Unmarshal([]byte(rawJobSubmitResult), result)
 	if err != nil {
