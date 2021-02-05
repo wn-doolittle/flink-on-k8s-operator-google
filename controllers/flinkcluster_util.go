@@ -571,14 +571,16 @@ func getFlinkJobSubmitLog(observedPod *corev1.Pod) (*FlinkJobSubmitLog, error) {
 		return nil, fmt.Errorf("job pod found, but no termination log found even though submission completed")
 	}
 
-	var mainContainerStatus corev1.ContainerStatus
+	var mainContainerStatus *corev1.ContainerStatus
 	for i := 0; i < len(containerStatuses); i++ {
 		if containerStatuses[i].Name == "main" {
-			mainContainerStatus = containerStatuses[i]
+			mainContainerStatus = &containerStatuses[i]
+			break
 		}
 	}
 
-	if mainContainerStatus.State.Terminated == nil ||
+	if mainContainerStatus == nil ||
+		mainContainerStatus.State.Terminated == nil ||
 		mainContainerStatus.State.Terminated.Message == "" {
 		return nil, fmt.Errorf("job pod found, but no termination log found even though submission completed")
 	}
