@@ -583,7 +583,8 @@ func TestGetFlinkJobDeploymentState(t *testing.T) {
 	var err error
 	var termMsg string
 
-	var containerName = "main"
+	var mainContainerName = "main"
+	var istioContainerName = "istio-proxy"
 
 	// success
 	termMsg = `
@@ -607,11 +608,17 @@ Job has been submitted with JobID ec74209eb4e3db8ae72db00bd7a830aa
 	pod = corev1.Pod{
 		Status: corev1.PodStatus{
 			ContainerStatuses: []corev1.ContainerStatus{{
-				Name: containerName,
+				Name: istioContainerName,
 				State: corev1.ContainerState{
 					Terminated: &corev1.ContainerStateTerminated{
-						Message: termMsg,
-					}}}}}}
+						Reason: "Completed",
+					}}},
+				{
+					Name: mainContainerName,
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{
+							Message: termMsg,
+						}}}}}}
 	submit, _ = getFlinkJobSubmitLog(&pod)
 	assert.DeepEqual(t, *submit, *expected)
 
@@ -623,11 +630,17 @@ Job has been submitted with JobID ec74209eb4e3db8ae72db00bd7a830aa
 	pod = corev1.Pod{
 		Status: corev1.PodStatus{
 			ContainerStatuses: []corev1.ContainerStatus{{
-				Name: containerName,
+				Name: istioContainerName,
 				State: corev1.ContainerState{
 					Terminated: &corev1.ContainerStateTerminated{
-						Message: "",
-					}}}}}}
+						Reason: "Completed",
+					}}},
+				{
+					Name: mainContainerName,
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{
+							Message: "",
+						}}}}}}
 	submit, err = getFlinkJobSubmitLog(&pod)
 	assert.Error(t, err, "job pod found, but no termination log found even though submission completed")
 }
