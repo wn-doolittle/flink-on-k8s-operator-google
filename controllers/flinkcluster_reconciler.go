@@ -19,13 +19,14 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
-	"reflect"
-	"time"
 
 	"github.com/go-logr/logr"
 	v1beta1 "github.com/googlecloudplatform/flink-operator/api/v1beta1"
@@ -519,10 +520,13 @@ func (reconciler *ClusterReconciler) reconcileJob() (ctrl.Result, error) {
 		// Trigger savepoint if required.
 		if len(jobID) > 0 {
 			shouldTakeSavepont, savepointTriggerReason := reconciler.shouldTakeSavepoint()
+			log.Info("### Should take savepoint for job? ", "jobID", jobID, "shouldTakeSavepont", shouldTakeSavepont, "savepointTriggerReason", savepointTriggerReason)
 			if shouldTakeSavepont {
 				err = reconciler.updateSavepointTriggerTimeStatus()
-				if err != nil {
+				log.Info("### Updated savepoint trigger time status ", "err", err)
+				if err == nil {
 					newSavepointStatus, _ = reconciler.takeSavepointAsync(jobID, savepointTriggerReason)
+					log.Info("### asked to take async savpoint", "newSavepointStatus", newSavepointStatus)
 				}
 			}
 		}
@@ -746,7 +750,10 @@ func (reconciler *ClusterReconciler) shouldTakeSavepoint() (bool, string) {
 	var jobStatus = reconciler.observed.cluster.Status.Components.Job
 	var savepointStatus = reconciler.observed.cluster.Status.Savepoint
 
+	log.Info("### Checking if we should take savpoint for job..")
+
 	if !canTakeSavepoint(*reconciler.observed.cluster) {
+		log.Info("#### Not possible to take savpoint.... please check configuration")
 		return false, ""
 	}
 
@@ -761,8 +768,11 @@ func (reconciler *ClusterReconciler) shouldTakeSavepoint() (bool, string) {
 
 	// Savepoint can be triggered in updater for user request, job-cancel and job update
 	if savepointStatus != nil && savepointStatus.State == v1beta1.SavepointStateNotTriggered {
+		log.Info("### Returning TRUE for take savpoint for job..", "savepointState", savepointStatus.State)
 		return true, savepointStatus.TriggerReason
 	}
+
+	log.Info("#### Savepoint Status is NIL")
 
 	// TODO: spec.job.savepointGeneration will be deprecated
 	if jobSpec.SavepointGeneration > jobStatus.SavepointGeneration &&
@@ -867,10 +877,13 @@ func (reconciler *ClusterReconciler) takeSavepoint(
 }
 
 func (reconciler *ClusterReconciler) updateSavepointTriggerTimeStatus() error {
+	var log = reconciler.log
 	var cluster = v1beta1.FlinkCluster{}
 	reconciler.observed.cluster.DeepCopyInto(&cluster)
 	var jobStatus = cluster.Status.Components.Job
+	log.Info("### Updating timestamp for cluster with jobStatus", "cluster", cluster, "jobStatus", jobStatus)
 	setTimestamp(&jobStatus.LastSavepointTriggerTime)
+	log.Info("### set timestamp ", "timestamp", &jobStatus.LastSavepointTriggerTime)
 	return reconciler.k8sClient.Status().Update(reconciler.context, &cluster)
 }
 

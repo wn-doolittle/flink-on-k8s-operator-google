@@ -20,6 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/go-logr/logr"
 	v1beta1 "github.com/googlecloudplatform/flink-operator/api/v1beta1"
 	"github.com/googlecloudplatform/flink-operator/controllers/flinkclient"
@@ -32,8 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 // ClusterStateObserver gets the observed state of the cluster.
@@ -51,10 +52,10 @@ type ObservedClusterState struct {
 	cluster           *v1beta1.FlinkCluster
 	revisions         []*appsv1.ControllerRevision
 	configMap         *corev1.ConfigMap
-	jmStatefulSet      *appsv1.StatefulSet
+	jmStatefulSet     *appsv1.StatefulSet
 	jmService         *corev1.Service
 	jmIngress         *extensionsv1beta1.Ingress
-	tmStatefulSet      *appsv1.StatefulSet
+	tmStatefulSet     *appsv1.StatefulSet
 	job               *batchv1.Job
 	jobPod            *corev1.Pod
 	flinkJobStatus    FlinkJobStatus
@@ -374,6 +375,7 @@ func (observer *ClusterStateObserver) observeSavepoint(observed *ObservedCluster
 		}
 		return err
 	}
+	log.Info("### Was not able to observer savepoint state due to ", "savepointStatus", savepointStatus)
 	return nil
 }
 

@@ -107,7 +107,9 @@ func (c *FlinkClient) TriggerSavepoint(
 		"cancel-job" : false
 	}`, dir)
 	var triggerID = SavepointTriggerID{}
+	c.Log.Info("About to trigger savepoint for jobId to dir", "jobId", jobID, "dir", dir)
 	var err = c.HTTPClient.Post(url, []byte(jsonStr), &triggerID)
+	c.Log.Info("Completed triggering savepoint for jobID to dir.  TriggerId = triggerID", "jobID", jobID, "dir", dir, "triggerID", triggerID)
 	return triggerID, err
 }
 
